@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>RNG FC – Fixture Generator V12</title>
+<title>RNG FC – Fixture Generator V13 (Throttled)</title>
 <style>
 :root{--bg:#111827;--card:#1f2937;--accent:#e11d8f;--text:#f3f4f6}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -30,6 +30,7 @@ display:none;width:100%;max-width:360px;margin-top:1rem}
 #historyList li{padding:.5rem 1rem;border-bottom:1px solid #374151;font-size:1rem}
 #historyList li:last-child{border-bottom:none}
 #clearBtn{background:#4b5563}
+#status{margin-top:1rem;font-size:.9rem;color:var(--text);opacity:.8}
 footer{margin-top:2rem;text-align:center;color:var(--text);font-size:.875rem}
 footer .banner{max-width:90%;height:auto;border-radius:.75rem;margin-bottom:.5rem}
 footer .creator{margin-bottom:.25rem}
@@ -41,56 +42,64 @@ footer .links a:hover{text-decoration:underline}
 <div class="logo"><img src="logo.png" alt="Logo" onerror="this.style.display='none'"></div>
 <h1>RNG&nbsp;FC</h1>
 <button id="generateBtn" disabled>Generate Fixture</button>
+<div id="status">Loading teams…</div>
 <div id="fixtureCard"></div>
 <div id="historySection"><div id="historyHeader"><h2>History</h2><button id="clearBtn">Clear</button></div><ul id="historyList"></ul></div>
 <footer>
 <img src="logo2.png" alt="German Gills banner" class="banner" onerror="this.style.display='none'">
 <div class="creator">Created by Rhys at German Gills</div>
 <div class="links">
-<a href="https://www.youtube.com/@GermanGills" target="_blank">YouTube</a>
-<a href="https://www.tiktok.com/@germangills" target="_blank">TikTok</a>
-<a href="https://x.com/Deutsch_Gills" target="_blank">X</a>
-<a href="https://www.instagram.com/germangills/" target="_blank">Instagram</a>
-<a href="https://www.linkedin.com/in/rhys-mortley-933367a7/" target="_blank">LinkedIn</a>
+  <a href="https://www.youtube.com/@GermanGills" target="_blank">YouTube</a>
+  <a href="https://www.tiktok.com/@germangills" target="_blank">TikTok</a>
+  <a href="https://x.com/Deutsch_Gills" target="_blank">X</a>
+  <a href="https://www.instagram.com/germangills/" target="_blank">Instagram</a>
+  <a href="https://www.linkedin.com/in/rhys-mortley-933367a7/" target="_blank">LinkedIn</a>
 </div>
 </footer>
+
 <script>
 const API_OPTIONS={method:"GET",headers:{
   "X-RapidAPI-Key":"df1bfc4a70msh492e102a9d94dd1p18d575jsnd57daf82159f",
   "X-RapidAPI-Host":"football-web-pages1.p.rapidapi.com"}};
 
-const COMP_IDS=[1,2,3,4,5,6,7]; // Verified IDs
+const COMP_IDS=[1,2,3,4,5,6,7]; // Verified
 const teamIds={};
+
 const generateBtn=document.getElementById('generateBtn');
+const statusEl=document.getElementById('status');
 const card=document.getElementById('fixtureCard');
 const historySection=document.getElementById('historySection');
 const historyList=document.getElementById('historyList');
 const clearBtn=document.getElementById('clearBtn');
 let history=[];
 
-// Load teams; proceed even if one comp fails
-let pending=COMP_IDS.length;
-COMP_IDS.forEach(id=>{
-  fetch(`https://football-web-pages1.p.rapidapi.com/teams.json?comp=${id}`,API_OPTIONS)
-  .then(r=>r.ok?r.json():Promise.reject(r.status))
-  .then(d=>{d.teams.forEach(t=>teamIds[t.name]=t.id);})
-  .catch(err=>console.warn('Comp fetch failed',id,err))
-  .finally(()=>{
-    pending--;
-    if(pending===0){
-      if(Object.keys(teamIds).length>=2){
-        console.log('Teams loaded',teamIds);
-        generateBtn.disabled=false;
-      }else{
-        alert('Could not load team data – API limit or network issue.');
-      }
+// Sequential loader with 1‑second delay between calls
+(async function loadTeams(){
+  for(const id of COMP_IDS){
+    statusEl.textContent=`Loading teams – league ${id}…`;
+    try{
+      const resp=await fetch(`https://football-web-pages1.p.rapidapi.com/teams.json?comp=${id}`,API_OPTIONS);
+      if(!resp.ok) throw new Error(resp.status);
+      const data=await resp.json();
+      data.teams.forEach(t=>teamIds[t.name]=t.id);
+      await new Promise(res=>setTimeout(res,1000)); // 1s throttle
+    }catch(e){
+      console.warn('Failed league',id,e);
     }
-  });
-});
+  }
+  const teamCount=Object.keys(teamIds).length;
+  if(teamCount>=2){
+    generateBtn.disabled=false;
+    statusEl.textContent=`Loaded ${teamCount} teams – ready!`;
+  }else{
+    statusEl.textContent="Could not load team data – RapidAPI blocked. Button stays disabled.";
+  }
+})();
+
+function slug(s){return s.replace(/[’']/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');}
 
 generateBtn.addEventListener('click',()=>{
   const names=Object.keys(teamIds);
-  if(names.length<2)return;
   let home,away;
   do{
     home=names[Math.random()*names.length|0];
@@ -99,9 +108,8 @@ generateBtn.addEventListener('click',()=>{
   renderFixture(home,away);
   addHistory(home,away);
 });
-clearBtn.addEventListener('click',()=>{history=[];historyList.innerHTML='';historySection.style.display='none';});
+clearBtn.addEventListener('click',()=>{history=[];historyList.innerHTML='';historySection.style.display='none'});
 
-function slug(s){return s.replace(/[’']/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');}
 function renderFixture(home,away){
   card.innerHTML=`<div class="fixture-vert">
     <div class="club-block"><img src="logos/${slug(home)}.png" class="club-logo" onerror="this.style.display='none'"><span class="team-name">${home}</span></div>
@@ -109,25 +117,32 @@ function renderFixture(home,away){
     <div class="club-block"><img src="logos/${slug(away)}.png" class="club-logo" onerror="this.style.display='none'"><span class="team-name">${away}</span></div>
   </div>`;
   card.style.display='block';
-  fetchH2H(home,away);
+  fetchHeadToHead(home,away);
 }
 function addHistory(h,a){history.unshift(`${h} vs ${a}`);historyList.innerHTML=history.map(x=>`<li>${x}</li>`).join('');historySection.style.display='block';}
 
-function fetchH2H(home,away){
+async function fetchHeadToHead(home,away){
   const hid=teamIds[home],aid=teamIds[away];
-  if(!hid||!aid)return;
-  fetch(`https://football-web-pages1.p.rapidapi.com/fixtures-results.json?team=${hid}`,API_OPTIONS)
-  .then(r=>r.json())
-  .then(d=>{
+  if(!hid||!aid) return;
+  try{
+    const r=await fetch(`https://football-web-pages1.p.rapidapi.com/fixtures-results.json?team=${hid}`,API_OPTIONS);
+    if(!r.ok) throw new Error(r.status);
+    const d=await r.json();
     const f=d.fixtures.filter(m=>(m.home_id===hid&&m.away_id===aid)||(m.home_id===aid&&m.away_id===hid));
-    const info=document.createElement('div');info.style.marginTop='1rem';
+    const info=document.createElement('div');
+    info.style.marginTop='1rem';
     info.innerHTML=`<strong>Previous meetings:</strong> ${f.length}
-    <table style="width:100%;margin-top:.5rem;color:var(--text);">
+      <table style="width:100%;margin-top:.5rem;color:var(--text);">
       ${f.map(m=>`<tr><td>${new Date(m.date).toLocaleDateString()}</td><td style="text-align:right;">${m.home_score}–${m.away_score}</td></tr>`).join('')}
-    </table>`;
+      </table>`;
     card.appendChild(info);
-  })
-  .catch(e=>console.warn('H2H fetch failed',e));
+  }catch(e){
+    console.warn('H2H fetch blocked',e);
+    const info=document.createElement('div');
+    info.style.marginTop='1rem';
+    info.textContent="H2H stats unavailable (rate limit).";
+    card.appendChild(info);
+  }
 }
 </script>
 </body>
