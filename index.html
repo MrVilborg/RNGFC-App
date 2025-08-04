@@ -1,0 +1,203 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RNG FC – Fixture Generator V8</title>
+  <style>
+    :root {
+      --bg: #111827;
+      --card: #1f2937;
+      --accent: #e11d8f;
+      --text: #f3f4f6;
+    }
+    * { box-sizing: border-box; margin:0; padding:0 }
+    body {
+      font-family: system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+    h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 1rem }
+    .logo {
+      width: 140px; height: 140px;
+      border-radius: 50%;
+      background: #374151;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; margin-bottom: 1rem;
+    }
+    .logo img { width:100%; height:100%; object-fit: contain }
+    button {
+      background: var(--accent);
+      border: none;
+      color: white;
+      padding: 0.75rem 1.25rem;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: opacity .2s;
+    }
+    button:hover { opacity: .9 }
+    #fixtureCard {
+      background: var(--card);
+      padding: 2rem 2.5rem;
+      border-radius: 1.25rem;
+      font-size: 1.5rem;
+      display: none;
+      width: 100%;
+      max-width: 360px;
+      margin-top: 1rem;
+    }
+    .fixture-vert {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.25rem;
+    }
+    .club-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .5rem;
+    }
+    .club-logo {
+      width: 120px; height: 120px;
+      object-fit: contain;
+      border-radius: 12px;
+    }
+    .team-name { font-weight: 600; text-align: center }
+    .vs {
+      color: var(--accent);
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+    #historySection {
+      width:100%;
+      max-width:640px;
+      margin-top:2rem;
+      display:none;
+    }
+    #historyHeader {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:.5rem;
+    }
+    #historyHeader h2 {
+      flex:1;
+      text-align:center;
+      font-size:1.25rem;
+    }
+    #historyList {
+      list-style:none;
+      background:var(--card);
+      border-radius:.75rem;
+      max-height:250px;
+      overflow-y:auto;
+      text-align:center;
+    }
+    #historyList li {
+      padding:.5rem 1rem;
+      border-bottom:1px solid #374151;
+      font-size:1rem;
+    }
+    #historyList li:last-child { border-bottom:none }
+    #clearBtn { background:#4b5563 }
+    footer {
+      margin-top:2rem;
+      text-align:center;
+      color: var(--text);
+      font-size: .875rem;
+    }
+    footer .banner {
+      max-width: 90%;
+      height: auto;
+      border-radius: .75rem;
+      margin-bottom: .5rem;
+    }
+    footer .creator { margin-bottom:.25rem }
+    footer .links a {
+      color: var(--accent);
+      text-decoration: none;
+      margin: 0 .5rem;
+    }
+    footer .links a:hover { text-decoration: underline }
+  </style>
+</head>
+<body>
+  <div class="logo">
+    <img src="logo.png" alt="Logo" onerror="this.style.display='none'">
+  </div>
+  <h1>RNG&nbsp;FC</h1>
+  <button id="generateBtn">Generate Fixture</button>
+  <div id="fixtureCard"></div>
+  <div id="historySection">
+    <div id="historyHeader">
+      <h2>History</h2><button id="clearBtn">Clear</button>
+    </div>
+    <ul id="historyList"></ul>
+  </div>
+  <footer>
+    <img src="logo2.png" alt="German Gills banner" class="banner" onerror="this.style.display='none'">
+    <div class="creator">Created by Rhys at German Gills</div>
+    <div class="links">
+      <a href="https://www.youtube.com/@GermanGills" target="_blank">YouTube</a>
+      <a href="https://www.tiktok.com/@germangills" target="_blank">TikTok</a>
+      <a href="https://x.com/Deutsch_Gills" target="_blank">X</a>
+      <a href="https://www.instagram.com/germangills/" target="_blank">Instagram</a>
+      <a href="https://www.linkedin.com/in/rhys-mortley-933367a7/" target="_blank">LinkedIn</a>
+    </div>
+  </footer>
+<script>
+  const teams = ["Arsenal", "Aston Villa", "Bournemouth", "Brentford", "Brighton & Hove Albion", "Burnley", "Chelsea", "Crystal Palace", "Everton", "Fulham", "Leeds United", "Liverpool", "Manchester City", "Manchester United", "Newcastle United", "Nottingham Forest", "Sunderland", "Tottenham Hotspur", "West Ham United", "Wolverhampton Wanderers", "Birmingham City", "Blackburn Rovers", "Bristol City", "Charlton Athletic", "Coventry City", "Derby County", "Hull City", "Ipswich Town", "Leicester City", "Middlesbrough", "Millwall", "Norwich City", "Oxford United", "Portsmouth", "Preston North End", "Queens Park Rangers", "Sheffield United", "Sheffield Wednesday", "Southampton", "Stoke City", "Swansea City", "Watford", "West Bromwich Albion", "Wrexham", "AFC Wimbledon", "Barnsley", "Blackpool", "Bolton Wanderers", "Bradford City", "Burton Albion", "Cardiff City", "Doncaster Rovers", "Exeter City", "Huddersfield Town", "Leyton Orient", "Lincoln City", "Luton Town", "Mansfield Town", "Northampton Town", "Peterborough United", "Plymouth Argyle", "Port Vale", "Reading", "Rotherham United", "Stevenage", "Stockport County", "Wigan Athletic", "Wycombe Wanderers", "Accrington Stanley", "Barnet", "Barrow", "Bristol Rovers", "Bromley", "Cambridge United", "Cheltenham Town", "Chesterfield", "Colchester United", "Crawley Town", "Crewe Alexandra", "Fleetwood Town", "Gillingham", "Grimsby Town", "Harrogate Town", "Milton Keynes Dons", "Newport County", "Notts County", "Oldham Athletic", "Salford City", "Shrewsbury Town", "Swindon Town", "Tranmere Rovers", "Walsall", "Aldershot Town", "Altrincham", "Boreham Wood", "Boston United", "Brackley Town", "Braintree Town", "Carlisle United", "Eastleigh", "FC Halifax Town", "Forest Green Rovers", "Gateshead", "Hartlepool United", "Morecambe", "Rochdale", "Scunthorpe United", "Solihull Moors", "Southend United", "Sutton United", "Tamworth", "Truro City", "Wealdstone", "Woking", "Yeovil Town", "York City", "AFC Fylde", "AFC Telford United", "Alfreton Town", "Bedford Town", "Buxton", "Chester", "Chorley", "Curzon Ashton", "Darlington", "Hereford", "Kidderminster Harriers", "King\u2019s Lynn Town", "Leamington", "Macclesfield", "Marine", "Merthyr Town", "Oxford City", "Peterborough Sports", "Radcliffe", "Scarborough Athletic", "South Shields", "Southport", "Spennymoor Town", "Worksop Town", "AFC Totton", "Bath City", "Chelmsford City", "Chesham United", "Chippenham Town", "Dagenham & Redbridge", "Dorking Wanderers", "Dover Athletic", "Eastbourne Borough", "Ebbsfleet United", "Enfield Town", "Farnborough", "Hampton & Richmond Borough", "Hemel Hempstead Town", "Hornchurch", "Horsham", "Maidenhead United", "Maidstone United", "Salisbury", "Slough Town", "Tonbridge Angels", "Torquay United", "Weston-super-Mare", "Worthing"];
+  function slugify(str){
+    return str.replace(/[’']/g,'').toLowerCase()
+              .replace(/[^a-z0-9]+/g,'-')
+              .replace(/(^-|-$)/g,'');
+  }
+  const card = document.getElementById('fixtureCard');
+  const historySection = document.getElementById('historySection');
+  const historyList = document.getElementById('historyList');
+  let history = [];
+  document.getElementById('generateBtn').addEventListener('click', ()=>{
+    if(teams.length<2) return;
+    let home, away;
+    do {
+      home = teams[Math.floor(Math.random()*teams.length)];
+      away = teams[Math.floor(Math.random()*teams.length)];
+    } while(home === away);
+    showFixture(home,away);
+    addHistory(home,away);
+  });
+  function showFixture(home,away){
+    const homeLogo = `logos/${slugify(home)}.png`;
+    const awayLogo = `logos/${slugify(away)}.png`;
+    card.innerHTML = `
+      <div class="fixture-vert">
+        <div class="club-block">
+          <img src="${homeLogo}" class="club-logo" onerror="this.style.display='none'">
+          <span class="team-name">${home}</span>
+        </div>
+        <span class="vs">vs</span>
+        <div class="club-block">
+          <img src="${awayLogo}" class="club-logo" onerror="this.style.display='none'">
+          <span class="team-name">${away}</span>
+        </div>
+      </div>`;
+    card.style.display = 'block';
+  }
+  function addHistory(home,away){
+    history.unshift(`${home} vs ${away}`);
+    historyList.innerHTML = history.map(h=>`<li>${h}</li>`).join('');
+    historySection.style.display = 'block';
+  }
+  document.getElementById('clearBtn').addEventListener('click', ()=>{
+    history=[]; historyList.innerHTML=''; historySection.style.display='none';
+  });
+</script>
+</body>
+</html>
